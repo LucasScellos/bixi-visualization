@@ -12,15 +12,16 @@ import time
 import pandas as pd
 import urllib.request
 import datetime as dt
+import keyboard
 
 # Number of collected data to create a .csv
-NB_ROWS_CSV = 4
+NB_ROWS_CSV = 100 
 
 # Get new data every 20 seconds
-TIME_BETWEEN_COLLECT = 1
+TIME_BETWEEN_COLLECT = 20
 
 # Collect time. If negative or null, infinite collect
-COLLECT_TIME = 10
+COLLECT_TIME = 0
 
 # CSV Prefix
 RESULT_PATH = "Sniffer Data"
@@ -34,7 +35,7 @@ class BixiSniffer:
             os.mkdir(os.path.join(self.result_path, "Available eBikes"))
 
         self.nb_rows_csv = nb_rows_csv
-        self.nb_csv = 0
+        self.nb_csv = 1
 
         self.time_between_collect = time_between_collect
         self.collect_time = collect_time
@@ -42,8 +43,9 @@ class BixiSniffer:
         # Manage thread sync with a queue
         self.nb_rows_queue = Queue()
         self.sniffer_on = False
-        self.thread = threading.Thread(
-            target=self.get_and_save_data, args=(self.nb_rows_queue,))
+        self.get_and_save_thread = threading.Thread(
+            target=self.get_and_save_data, args=(self.nb_rows_queue,),daemon=True)
+        self.sniffer_thread = threading.Thread(target=self.sniffer)
 
         # Init dataframe columns
         df_bikes, df_ebikes = self.get_data()
@@ -54,7 +56,8 @@ class BixiSniffer:
 
         self.df_available_bikes = self.df_available_bikes_original.copy()
         self.df_available_ebikes = self.df_available_ebikes_original.copy()
-
+        print("Press SPACE to abord acquisition (will save incomplete data) ...")
+        
     def query_station_status(self, bixi_url="https://gbfs.velobixi.com/gbfs/fr/station_status.json"):
         with urllib.request.urlopen(bixi_url) as data_url:
             data = json.loads(data_url.read().decode())
@@ -83,7 +86,7 @@ class BixiSniffer:
             df, columns='station_id', index='time', values='num_ebikes_available')
         return df_bikes, df_ebikes
 
-    def get_and_save_data(self, nb_rows_queue:Queue):
+    def get_and_save_data(self, nb_rows_queue: Queue):
         '''
         Get each data, accumulate and save to .csv
         '''
@@ -102,27 +105,46 @@ class BixiSniffer:
 
             # Save csv if nb_rows is enough
             if nb_rows == self.nb_rows_csv:
-                self.nb_csv += 1
                 self.df_available_bikes.to_csv(os.path.join(
                     self.result_path, "Available Bikes", f"Available_Bikes_{str(self.nb_csv).zfill(3)}.csv"))
                 self.df_available_ebikes.to_csv(os.path.join(
                     self.result_path, "Available eBikes", f"Available_eBikes_{str(self.nb_csv).zfill(3)}.csv"))
+                self.nb_csv += 1
 
                 # Reset DataFrames
                 self.df_available_bikes = self.df_available_bikes_original.copy()
                 self.df_available_ebikes = self.df_available_ebikes_original.copy()
-        print("Thread stopped")
+        print("Get and save data thread stopped")
 
     def start_sniffer(self):
+        self.sniffer_on = True
+        
+        # Start loop thread and get_and_save thread
+        self.sniffer_thread.start()
+        self.get_and_save_thread.start()
+        
+        # Wait for pressing keyboard or end of time...
+        while self.sniffer_on:
+            if keyboard.is_pressed("space"):
+                # Passing sniffer_on to False will end other threads
+                self.sniffer_on=False
+            time.sleep(0.01)
+        
+        # Save data to csv if not empty
+        if len(self.df_available_bikes):
+            self.df_available_bikes.to_csv(os.path.join(
+                self.result_path, "Available Bikes", f"Available_Bikes_{str(self.nb_csv).zfill(3)}.csv"))
+            self.df_available_ebikes.to_csv(os.path.join(
+                self.result_path, "Available eBikes", f"Available_eBikes_{str(self.nb_csv).zfill(3)}.csv"))
+            self.nb_csv += 1
+
+
+    def sniffer(self):
         nb_rows = 0
         start_time = time.perf_counter()
-        self.sniffer_on = True
-        self.thread.start()
-
         print("Starting Bixi Sniffer..")
 
-
-        while 1:
+        while self.sniffer_on:
             # Loop that manage nb_rows and therefore the thread and saving to csv
             nb_rows += 1
 
@@ -133,14 +155,15 @@ class BixiSniffer:
             # Print information
             print(
                 f"Time since beggining : {dt.timedelta(seconds=int(current_time))} | Current number of csv files : {self.nb_csv} | Number of rows for current csv : {nb_rows}")
-            
+
             # Reset nb_rows if equals to desired rows number is csv
             if nb_rows == self.nb_rows_csv:
                 nb_rows = 0
 
             # Stop condition if collect_time > 0
             if self.collect_time > 0:
-                print(f"Remaining time: {int(self.collect_time-current_time)} s")
+                print(
+                    f"Remaining time: {int(self.collect_time-current_time)} s")
                 if current_time > self.collect_time:
                     break
 
@@ -149,6 +172,7 @@ class BixiSniffer:
 
         self.sniffer_on = False
         print("Sniffer stopped successfully !")
+
 
 if __name__ == "__main__":
     sniffer = BixiSniffer(RESULT_PATH, NB_ROWS_CSV,
