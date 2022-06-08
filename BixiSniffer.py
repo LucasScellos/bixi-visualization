@@ -12,10 +12,9 @@ import time
 import pandas as pd
 import urllib.request
 import datetime as dt
-import keyboard
 
 # Number of collected data to create a .csv
-NB_ROWS_CSV = 100 
+NB_ROWS_CSV = 100
 
 # Get new data every 20 seconds
 TIME_BETWEEN_COLLECT = 20
@@ -44,7 +43,7 @@ class BixiSniffer:
         self.nb_rows_queue = Queue()
         self.sniffer_on = False
         self.get_and_save_thread = threading.Thread(
-            target=self.get_and_save_data, args=(self.nb_rows_queue,),daemon=True)
+            target=self.get_and_save_data, args=(self.nb_rows_queue,), daemon=True)
         self.sniffer_thread = threading.Thread(target=self.sniffer)
 
         # Init dataframe columns
@@ -56,8 +55,8 @@ class BixiSniffer:
 
         self.df_available_bikes = self.df_available_bikes_original.copy()
         self.df_available_ebikes = self.df_available_ebikes_original.copy()
-        print("Press SPACE to abord acquisition (will save incomplete data) ...")
-        
+        print("Press CTRL+C to abord acquisition (will save incomplete data) ...")
+
     def query_station_status(self, bixi_url="https://gbfs.velobixi.com/gbfs/fr/station_status.json"):
         with urllib.request.urlopen(bixi_url) as data_url:
             data = json.loads(data_url.read().decode())
@@ -79,6 +78,11 @@ class BixiSniffer:
         return df
 
     def get_data(self):
+        '''
+        Get data and return two dataframes:
+            - one for available bikes
+            - one for available ebikes
+        '''
         df = self.query_station_status()
         df_bikes = pd.pivot_table(
             df, columns='station_id', index='time', values='num_bikes_available')
@@ -105,39 +109,40 @@ class BixiSniffer:
 
             # Save csv if nb_rows is enough
             if nb_rows == self.nb_rows_csv:
-                self.df_available_bikes.to_csv(os.path.join(
-                    self.result_path, "Available Bikes", f"Available_Bikes_{str(self.nb_csv).zfill(3)}.csv"))
-                self.df_available_ebikes.to_csv(os.path.join(
-                    self.result_path, "Available eBikes", f"Available_eBikes_{str(self.nb_csv).zfill(3)}.csv"))
-                self.nb_csv += 1
+                self.save_to_csv()
 
                 # Reset DataFrames
                 self.df_available_bikes = self.df_available_bikes_original.copy()
                 self.df_available_ebikes = self.df_available_ebikes_original.copy()
         print("Get and save data thread stopped")
 
-    def start_sniffer(self):
-        self.sniffer_on = True
-        
-        # Start loop thread and get_and_save thread
-        self.sniffer_thread.start()
-        self.get_and_save_thread.start()
-        
-        # Wait for pressing keyboard or end of time...
-        while self.sniffer_on:
-            if keyboard.is_pressed("space"):
-                # Passing sniffer_on to False will end other threads
-                self.sniffer_on=False
-            time.sleep(0.01)
-        
-        # Save data to csv if not empty
-        if len(self.df_available_bikes):
-            self.df_available_bikes.to_csv(os.path.join(
-                self.result_path, "Available Bikes", f"Available_Bikes_{str(self.nb_csv).zfill(3)}.csv"))
-            self.df_available_ebikes.to_csv(os.path.join(
-                self.result_path, "Available eBikes", f"Available_eBikes_{str(self.nb_csv).zfill(3)}.csv"))
-            self.nb_csv += 1
+    def save_to_csv(self):
+        '''
+        Save dataframes to csv
+        Increments self.nb_csv
+        '''
+        self.df_available_bikes.to_csv(os.path.join(
+            self.result_path, "Available Bikes", f"Available_Bikes_{str(self.nb_csv).zfill(3)}.csv"))
+        self.df_available_ebikes.to_csv(os.path.join(
+            self.result_path, "Available eBikes", f"Available_eBikes_{str(self.nb_csv).zfill(3)}.csv"))
+        self.nb_csv += 1
 
+    def start_sniffer(self):
+        try:
+            self.sniffer_on = True
+            # Start loop thread and get_and_save thread
+            self.sniffer_thread.start()
+            self.get_and_save_thread.start()
+
+            while self.sniffer_on:
+                time.sleep(0.1)
+
+        except KeyboardInterrupt:
+            # Stop threads and save last data if not empty
+            self.sniffer_on = False
+        finally:
+            if len(self.df_available_bikes):
+                self.save_to_csv()
 
     def sniffer(self):
         nb_rows = 0
