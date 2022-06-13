@@ -15,7 +15,7 @@ class DashApp:
         self.data = Data()
 
         # Create figures
-        fig_creator = Figures()
+        self.fig_creator = Figures()
 
         self.app.layout = html.Div(
             [
@@ -36,7 +36,7 @@ class DashApp:
             Input('stations_map_slider', 'value'))
         def update_figure(nb_elements):
             new_df = self.data.bixi_stations[:nb_elements]
-            return fig_creator.create_stations_map(new_df)
+            return self.fig_creator.create_stations_map(new_df)
         
         # df = pd.read_csv('https://plotly.github.io/datasets/country_indicators.csv')
 

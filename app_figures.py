@@ -26,7 +26,8 @@ class Figures:
             lat="latitude",
             lon="longitude",
             hover_name="name",
-            zoom=9
+            zoom=9.25,
+            center={"lat": 45.5569442, "lon": -73.6336101},
         )
         fig.update_layout(mapbox_style="open-street-map")
         fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
