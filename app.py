@@ -23,9 +23,9 @@ class DashApp:
                 dcc.Graph(id="stations_map"),
                 dcc.Slider(
                     min=1,
-                    max=len(self.data.bixi_stations),
+                    max=len(self.data.count_stations),
                     step=None,
-                    value=len(self.data.bixi_stations),
+                    value=len(self.data.count_stations),
                     id="stations_map_slider",
                 ),
             ]
@@ -35,7 +35,7 @@ class DashApp:
             Output('stations_map', 'figure'),
             Input('stations_map_slider', 'value'))
         def update_figure(nb_elements):
-            new_df = self.data.bixi_stations[:nb_elements]
+            new_df = self.data.count_stations[:nb_elements]
             return self.fig_creator.create_stations_map(new_df)
         
         # df = pd.read_csv('https://plotly.github.io/datasets/country_indicators.csv')
