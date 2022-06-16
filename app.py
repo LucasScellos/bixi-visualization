@@ -21,23 +21,55 @@ class DashApp:
             [
                 html.H1("Bixi Data Visualisation"),
                 dcc.Graph(id="stations_map"),
-                dcc.Slider(
-                    min=1,
-                    max=len(self.data.count_stations),
-                    step=None,
-                    value=len(self.data.count_stations),
-                    id="stations_map_slider",
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.P("Month Timeline for 2021"),
+                                dcc.RangeSlider(
+                                    min=1,
+                                    max=12,
+                                    step=None,
+                                    value=[1, 12],
+                                    marks={
+                                        str(month): str(month) for month in range(1, 13)
+                                    },
+                                    id="stations_map_slider_timeline",
+                                ),
+                            ],
+                            id="div_slider_timeline",
+                        ),
+                        html.P("How many best stations would you see?"),
+                        dcc.Slider(
+                            min=1,
+                            max=len(self.data.count_stations),
+                            step=None,
+                            value=len(self.data.count_stations),
+                            id="stations_map_slider_best",
+                        ),
+                    ],
+                    id="div_slider_best_bixis",
                 ),
             ]
         )
 
         @self.app.callback(
-            Output('stations_map', 'figure'),
-            Input('stations_map_slider', 'value'))
-        def update_figure(nb_elements):
-            new_df = self.data.count_stations[:nb_elements]
-            return self.fig_creator.create_stations_map(new_df)
-        
+            Output("stations_map", "figure"),
+            # Input("stations_map_slider_best", "value"),
+            Input("stations_map_slider_timeline", "value"),
+        )
+        def update_figure(timeline):
+            filtered_df = Data.filter_by_date(
+                self.data.data_stations_2021,
+                f"2021-{timeline[0]}",
+                f"2021-{timeline[1]}",
+            )
+            count_df = self.data.get_deplacements_count(filtered_df)
+            # TODO : sort count_df and get max size to update slider_best_bixi
+            # TODO : Manage empty dataframe for months like Jan-Mar
+
+            return self.fig_creator.create_stations_map(count_df)
+
         # df = pd.read_csv('https://plotly.github.io/datasets/country_indicators.csv')
 
         # app.layout = html.Div([

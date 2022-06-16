@@ -30,12 +30,12 @@ class Data:
         """
         # Get the number of trajets
         count_stations=filtered_df["emplacement_pk_start"].value_counts()
-        count_stations=pd.DataFrame({"station_id":count_stations.index,"nb_trajets":count_stations.values}).set_index("station")
+        count_stations=pd.DataFrame({"station_id":count_stations.index,"nb_trajets":count_stations.values}).set_index("station_id")
         
         # Join the station_id with the name and the coordinates
         count_stations=count_stations.merge(self.bixi_stations,left_on="station_id",right_on="pk")
         count_stations=count_stations[["pk","name","latitude","longitude","nb_trajets"]]
-        count_stations.set_index("name",inplace=True)
+        # count_stations.set_index("name",inplace=True)
         return count_stations     
 
     @classmethod
