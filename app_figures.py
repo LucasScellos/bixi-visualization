@@ -2,6 +2,8 @@ import time
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import numpy as np
+import matplotlib as mpl
 
 MONTHS = [
     "January",
@@ -38,8 +40,9 @@ class Data:
         # To avoid because we will choose a period (here is for the sum of the year):
         # Get station Bixi count
         # self.count_stations = pd.read_csv("data\\2021_count_stations.csv")
+        
         # Get all number of deplacements
-        # self.deplacements_trajets = pd.read_csv("data\\deplacement.csv")
+        self.deplacements = pd.read_csv("data\\2021_deplacements.csv")
         
         end_time = time.perf_counter()
         print(f"Data loaded! Time needed: {end_time-start_time:.1f} s")
@@ -148,6 +151,52 @@ class Figures:
             margin=dict(l=0, r=0, t=0, b=0),
         )
         return fig
+    
+    def create_stations_deplacement_map(self,deplacements:pd.DataFrame, pickup_name:str):
+        # Color bounds for the value gradient
+        c1="#22c1c3"
+        c2="#fdbb2d"
+        
+        df=deplacements
+
+        # Width line bounds according to value
+        min_max_width = [1, 4]
+        min_max_nb = [
+            df[df["pickup_name"] == pickup_name]["nb"].min(),
+            df[df["pickup_name"] == pickup_name]["nb"].max(),
+        ]
+
+        fig = go.Figure()
+        for idx in df[df["pickup_name"] == pickup_name].index:
+            fig.add_trace(
+                go.Scattermapbox(
+                    mode="lines",
+                    # name="to ...",
+                    lat=[df["pickup_latitude"][idx], df["dropoff_latitude"][idx]],
+                    lon=[df["pickup_longitude"][idx], df["dropoff_longitude"][idx]],
+                    line=dict(
+                        color=Figures._color_fader(c1,c2,np.interp(df["nb"][idx],min_max_nb,[0,1])),
+                        width=np.interp(df["nb"][idx], min_max_nb, min_max_width),
+                    ),
+                )
+            )
+
+        fig.update_layout(
+            margin={"l": 0, "t": 0, "b": 0, "r": 0},
+            mapbox={
+                "style": "open-street-map",
+                "center": {"lat": 45.5569442, "lon": -73.6336101},
+                "zoom": 9.25,
+            },
+            showlegend=False,
+        )
+        return fig
+        
+    @classmethod
+    def _color_fader(cls,c1,c2,mix=0): #fade (linear interpolate) from color c1 (at mix=0) to c2 (mix=1)
+            c1=np.array(mpl.colors.to_rgb(c1))
+            c2=np.array(mpl.colors.to_rgb(c2))
+            return mpl.colors.to_hex((1-mix)*c1 + mix*c2)
 
 
 if __name__ == "__main__":
