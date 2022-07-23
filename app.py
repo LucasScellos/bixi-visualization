@@ -141,21 +141,21 @@ class DashApp:
             fig = self.fig_creator.create_stations_deplacement_history(dfs_dict)
             return fig
         
-        # Callback to update station deplacement map when clicked station on map
-        # TODO: Optimize because its lagging a lot...
-        @self.app.callback(
-            Output("station_deplacement_map", "figure"),
-            Output("station_deplacement_h5","children"),
-            Input("stations_map", "clickData"),
-        )
-        def update_station_deplacement_by_months(clickData):
-            if clickData is None:
-                return go.Figure(), "No station clicked"
-            print(clickData)
-            station_name = clickData["points"][0]["hovertext"]
-            h5_text=f"Clicked station: {station_name}"
-            fig = self.fig_creator.create_stations_deplacement_map(self.data.deplacements,station_name)
-            return fig, h5_text
+        # # Callback to update station deplacement map when clicked station on map
+        # # TODO: Optimize because its lagging a lot...
+        # @self.app.callback(
+        #     Output("station_deplacement_map", "figure"),
+        #     Output("station_deplacement_h5","children"),
+        #     Input("stations_map", "clickData"),
+        # )
+        # def update_station_deplacement_by_months(clickData):
+        #     if clickData is None:
+        #         return go.Figure(), "No station clicked"
+        #     print(clickData)
+        #     station_name = clickData["points"][0]["hovertext"]
+        #     h5_text=f"Clicked station: {station_name}"
+        #     fig = self.fig_creator.create_stations_deplacement_map(self.data.deplacements,station_name)
+        #     return fig, h5_text
         
         
 

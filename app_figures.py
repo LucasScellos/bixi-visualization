@@ -39,10 +39,10 @@ class Data:
 
         # To avoid because we will choose a period (here is for the sum of the year):
         # Get station Bixi count
-        # self.count_stations = pd.read_csv("data\\2021_count_stations.csv")
+        # self.count_stations = pd.read_csv("data/2021_count_stations.csv")
         
         # Get all number of deplacements
-        self.deplacements = pd.read_csv("data\\2021_deplacements.csv")
+        self.deplacements = pd.read_csv("data/2021_deplacements.csv")
         
         end_time = time.perf_counter()
         print(f"Data loaded! Time needed: {end_time-start_time:.1f} s")
@@ -50,7 +50,7 @@ class Data:
     def get_open_data(self):
         # Get deplacements for 2021 (for now) with start_time as index and converted to time object
         # TODO: get displacement for all years
-        self.data_stations_2021 = pd.read_csv("data\\2021_donnees_ouvertes.csv")
+        self.data_stations_2021 = pd.read_csv("data/2021_donnees_ouvertes.csv")
         self.data_stations_2021["start_date"] = pd.to_datetime(
             self.data_stations_2021["start_date"]
         )
@@ -69,7 +69,7 @@ class Data:
         self.max_month_idx = self.data_stations_2021["Month"].max()
 
         # Get Bixi station loc (used for merge and to get location of stations)
-        self.bixi_stations = pd.read_csv("data\\2021_stations.csv")
+        self.bixi_stations = pd.read_csv("data/2021_stations.csv")
 
     def get_deplacements_per_month_per_station(self):
         # Create dict of deplacement over month for each station
